@@ -54,8 +54,18 @@ function CnvCtrl($scope, $sce) {
     r = data[parseInt(song_idx)];
     return {value: r, unit:'', show: r !== undefined};
   }
-  
-  convertors = [toCelcius, minPerMilesToKmph, elapsedSong];
+
+  milesPerDay = function(achievedMiles) {
+    var remainingMiles     = 100 - parseFloat(achievedMiles);
+    var currentDate        = new Date();
+    var dayOfMonth         = new Date().getUTCDate();
+    var daysInCurrentMonth = new Date(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 0).getDate();
+    var remainingDays      = daysInCurrentMonth - dayOfMonth;
+    var r                  = round(remainingMiles / remainingDays, 2);
+    return {value: r, unit:' miles/day', show: r !== undefined && !isNaN(r)};
+  }
+
+  convertors = [toCelcius, minPerMilesToKmph, elapsedSong, milesPerDay];
 
   $scope.$watch('allInput', function() {
     $scope.results = _.map(convertors, function(f) {
