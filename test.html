@@ -6,56 +6,72 @@
     <script src="http://underscorejs.org/underscore-min.js"></script>
     <script>
 function CnvCtrl($scope, $sce) {
-  document.getElementById("allInput").focus();
+  document.getElementById('allInput').focus();
   $scope.results = [];
   $scope.allInput = '';
-  dummy = {value:undefined, show:false};
 
+  var dummy = {value:undefined, show:false};
+  var convertors = [toCelcius, minPerMilesToKmph, elapsedSong, milesPerDay];
 
-  round = function(x, n) {
-    n = n | 2;
-    return Math.round(x * Math.pow(10, n)) / Math.pow(10, n);
+  $scope.$watch('allInput', function() {
+    $scope.results = _.map(convertors, function(f) {
+       var r = f($scope.allInput);
+       r.unit = $sce.trustAsHtml(r.unit);
+       r.show = r.show || !isNaN(r.value);
+       return r;
+    });
+  });
+
+  return;
+
+  function round(x, n) {
+    var precision = n || 2;
+    return Math.round(x * Math.pow(10, precision)) / Math.pow(10, precision);
   }
-  toCelcius = function(arg) {
+
+  function toCelcius(arg) {
     if (arg === undefined || arg === '') {
       return dummy;
     }
     // (Â°F  -  32)  x  5/9 = Â°C
-    return {value: round((arg - 32) * 5 / 9.0), unit:"&deg;C"};
-  };
+    return {value: round((arg - 32) * 5 / 9.0), unit:'&deg;C'};
+  }
 
-  minPerMilesToKmph = function(arg) {
-    if (arg === undefined || arg === '')
+  function minPerMilesToKmph(arg) {
+    if (arg === undefined || arg === '') {
       return dummy;
+    }
 
-    argv = _.map(arg.split(':'), function(x) {
+    var argv = _.map(arg.split(':'), function(x) {
       if (x === '') return 0;
       return parseInt(x);
     });
 
-    if (argv.length > 2)
+    if (argv.length > 2) {
       return dummy;
+    }
 
     if (argv.length === 1) {
       argv[1] = 0;
     }
 
-    if (_.some(_.map(argv, function(x) { return typeof n ==! 'number' || x < 0 || x >= 60; })))
+    if (_.some(_.map(argv, function(x) { return typeof n !== 'number' || x < 0 || x >= 60; })))
       return dummy;
 
     // x mpm => 60*1.60934/x kmph
-    return {value: round(60 * 1.60934 / (argv[0] + argv[1]/60.0)), unit:"km/h"};
+    return {value: round(60 * 1.60934 / (argv[0] + argv[1]/60.0)), unit:'km/h'};
   }
 
-  elapsedSong = function(arg) {
-    data = ['4:06', '8:42', '13:20', '19:46', '24:58', '29:41', '34:28', '39:21', '44:22', '50:36', '55:32', '59:40', '65:09', '70:18'];
-    argv = arg.split('+');
-    song_idx = argv[0];
-    r = data[parseInt(song_idx)];
+  function elapsedSong(arg) {
+    var data = ['4:06',  '8:42',  '13:20', '19:46', '24:58', '29:41', '34:28',
+                '39:21', '44:22', '50:36', '55:32', '59:40', '65:09', '70:18'];
+    var argv = arg.split('+');
+    var song_idx = argv[0];
+    var r = data[parseInt(song_idx)];
     return {value: r, unit:'', show: r !== undefined};
   }
 
-  milesPerDay = function(achievedMiles) {
+  function milesPerDay(achievedMiles) {
     var remainingMiles     = 100 - parseFloat(achievedMiles);
     var currentDate        = new Date();
     var dayOfMonth         = new Date().getUTCDate();
@@ -64,28 +80,17 @@ function CnvCtrl($scope, $sce) {
     var r                  = round(remainingMiles / remainingDays, 2);
     return {value: r, unit:' miles/day', show: r !== undefined && !isNaN(r)};
   }
-
-  convertors = [toCelcius, minPerMilesToKmph, elapsedSong, milesPerDay];
-
-  $scope.$watch('allInput', function() {
-    $scope.results = _.map(convertors, function(f) {
-       r = f($scope.allInput);
-       r.unit = $sce.trustAsHtml(r.unit);
-       r.show = r.show || !isNaN(r.value);
-       return r;
-    });
-  });
 }
 </script>
 </head>
 <body>
-	<div ng-controller="CnvCtrl">
-	<div class="container"><div class="row"><div class="col-xs-12">
+  <div ng-controller="CnvCtrl">
+  <div class="container"><div class="row"><div class="col-xs-12">
       <input type="text" id="allInput" ng-model="allInput" placeholder="Enter something here" class="form-control">
        </div></div></div>
       <div class="list-group">
-	      <a href="#" class="list-group-item" ng-repeat="result in results track by $index" 
-		      ng-show="result.show">{{result.value}}<span ng-bind-html="result.unit"></span></a>
+        <a href="#" class="list-group-item" ng-repeat="result in results track by $index"
+          ng-show="result.show">{{result.value}}<span ng-bind-html="result.unit"></span></a>
       </div>
 
     </div>
