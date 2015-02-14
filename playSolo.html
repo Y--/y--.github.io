@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html ng-app="playApp">
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular.min.js"></script>
+<script language="javascript">
+"use strict";
+
+var N = 52;
+var cardsPerSuits = N / 4;
+
+function simulate(nbCards, nbTrials) {
+  var startTime = window.performance.now();
+  // Counts
+  var sum         = 0;
+  var nbVictories = 0;
+  for (var i = 0; i < nbTrials; ++i) {
+    var deck = deal(nbCards);
+    var res = play(deck).length;
+    if (res === 0) {
+      nbVictories++;
+    } else {
+      sum += res;
+    }
+  }
+
+  return {
+    elapsed     : window.performance.now() - startTime,
+    sum         : sum,
+    nbVictories : nbVictories,
+    nbTrials    : nbTrials
+  };
+}
+
+function deal(N) {
+  var deck = [];
+  var available = new Array(N);
+  for (var i = 0; i < N; ++i) {
+    available[i] = i;
+  }
+
+  for (var j = 0; j < N; ++j) {
+    var idx = Math.floor(Math.random() * available.length);
+    deck.push(available[idx]);
+    available.splice(idx, 1);
+  }
+  return deck;
+}
+
+function color(n) {
+  return Math.floor(n / cardsPerSuits);
+}
+
+function face(n) {
+  return n % cardsPerSuits;
+}
+
+function colorName(n) {
+  return {
+    0 : "Heart",
+    1 : "Diamon",
+    2 : "Spade",
+    3 : "Club",
+  }[color(n)];
+}
+
+function faceName(n) {
+  return {
+    0  : "2",
+    1  : "3",
+    2  : "4",
+    3  : "5",
+    4  : "6",
+    5  : "7",
+    6  : "8",
+    7  : "9",
+    8  : "10",
+    9  : "Jack",
+    10 : "Queen",
+    11 : "King",
+    12 : "Ace"
+  }[face(n)];
+}
+
+function cardName(n) {
+  return faceName(n) + " of " + colorName(n);
+}
+
+function play(deck) {
+  var hand = [];
+  while (deck.length) {
+    hand.push(deck.pop());
+    while (hand.length > 3) {
+      var card1 = hand[hand.length - 4];
+      var card4 = hand[hand.length - 1];
+      if (color(card1) === color(card4)) {
+        // Remove the two in between
+        hand.splice(hand.length - 2, 2);
+        continue;
+      }
+      if (face(card1) === face(card4)) {
+        // Remove the last four
+        hand.splice(hand.length - 4, 4);
+        continue;
+      }
+      // Nothing changed.
+      break;
+    }
+  }
+  return hand;
+}
+
+// Dummy angular controller.
+angular
+.module("playApp", [])
+.controller("PlayController", ["$scope", function($scope) {
+  $scope.simulations = [];
+
+  $scope.runSimulation = function() {
+    var deck = deal(N);
+    $scope.simulations.push(play(deck).map(cardName));
+  };
+
+  $scope.runMonteCarloSimulation = function() {
+    $scope.monteCarloSimulation = simulate(N, $scope.monteCarloIterationCount);
+  };
+
+  $scope.clearSimulations = function() {
+    $scope.simulations = [];
+  };
+
+}]);
+</script>
+
+</head>
+<body>
+  <div ng-controller="PlayController">
+    <h2>Single simulation</h2>
+    <div ng-if="!simulations.length">Run a simulation to see it's outcome.</div>
+    <div ng-if="simulations.length">
+      <ul class="unstyled">
+        <li ng-repeat="simulation in simulations">
+          <span ng-if="simulation.length">
+            <p>You loose : there are {{simulation.length}} cards at the end :</p>
+            <p>{{simulation.join(", ") | json}}</p>
+          </span>
+          <span ng-if="!simulation.length">
+            You won !
+          </span>
+        </li>
+      </ul>
+    </div>
+    <input class="btn-primary" type="submit" value="Run One Simulation" ng-click="runSimulation()">
+    <input class="btn-primary" type="submit" value="Clear" ng-click="clearSimulations()">
+    <br/><br/>
+    <div>
+      <h2>Monte-Carlo simulation</h2>
+      <label>Number of iterations :</label><input type="text" ng-model="monteCarloIterationCount" placeholder="Iteration count">
+      <div ng-if="monteCarloSimulation">
+        <h3>Results :</h3>
+        <ul>
+          <li>Ran experiment {{monteCarloSimulation.nbTrials}} times</li>
+          <li>Won {{monteCarloSimulation.nbVictories}} times</li>
+          <li>Average hand size at the end : {{monteCarloSimulation.sum / monteCarloSimulation.nbTrials}} cards</li>
+          <li>Win probability : {{monteCarloSimulation.nbVictories / monteCarloSimulation.nbTrials * 100}}%</li>
+          <li>Took {{monteCarloSimulation.elapsed / 1000 | number:3}} seconds ({{monteCarloSimulation.nbTrials / (monteCarloSimulation.elapsed / 1000) | number:0}} simulations per second).</li>
+        </ul>
+      </div>
+      <input class="btn-primary" type="submit" value="Run" ng-click="runMonteCarloSimulation()">
+    </div>
+  </div>
+</body>
+</body>
+</html>
+
+
